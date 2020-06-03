@@ -13,16 +13,41 @@ class TableDefinition:
         self.namespace = schema
         self.connection = connection
 
-        if (self.name is not None
-                and self.namespace is not None
-                and self.connection is not None):
-            self.get_column_definition()
-            self.get_index_definition()
-        else:
+        if (self.name is None
+                or self.namespace is None
+                or self.connection is None):
             raise NameError("schema, name and connection are "
                             "required to describe a table")
 
-    def get_column_definition(self) -> None:
+        if not self.check_table_exists():
+            raise NameError("The requested table does not exist: "
+                            "{}.{}".format(self.namespace, self.name))
+
+        self.get_column_definition()
+        self.get_index_definition()
+        self.get_permission_definition()
+
+    def check_table_exists(self) -> bool:
+        where_dict = {"table_schema": self.namespace, "table_name": self.name}
+
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT
+                COUNT(*)
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema = %(table_schema)s
+                AND table_name = %(table_name)s
+            """,
+            where_dict)
+
+        result = cursor.fetchone()[0] == 1
+        cursor.close()
+
+        return cursor
+
+    def get_column_definition(self) -> list:
         """
         Get a list of dictionaries for the specified
         schema.table in the database connected to.
@@ -51,7 +76,9 @@ class TableDefinition:
 
         self.extract_column_definitions(columns)
 
-    def extract_column_definitions(self, columns: list) -> None:
+        return columns
+
+    def extract_column_definitions(self, columns: list) -> list:
         for column in columns:
             column_definition = ColumnDefinition(
                 column.get('column_name'),
@@ -67,7 +94,9 @@ class TableDefinition:
                     column.get('column_name')
                 )
 
-    def get_index_definition(self) -> None:
+        return self.primary_key_definition
+
+    def get_index_definition(self) -> list:
         """
         Get a list of indexes for the specified
         schema.table in the database connected to.
@@ -93,9 +122,9 @@ class TableDefinition:
 
         self.extract_index_definitions(indexes)
 
-    def extract_index_definitions(self, indexes: list) -> None:
-        object = dict()
+        return indexes
 
+    def extract_index_definitions(self, indexes: list) -> list:
         for index in indexes:
             index_str = index.get('indexdef');
 
@@ -111,6 +140,60 @@ class TableDefinition:
             index_definition.fields = fields.split(', ')
 
             self.index_definitions.push(index_definition)
+
+        return self.index_definitions
+
+    def get_permission_definition(self) -> None:
+        """
+        Get a list of permissions for the specified
+        schema.table in the database connected to.
+        """
+
+        where_dict = {"table_schema": self.namespace, "table_name": self.name}
+
+        cursor = self.connection.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute("""SELECT
+                            grantee,
+                            privilege_type
+                        FROM
+                            information_schema.role_table_grants
+                        WHERE
+                            grantee NOT in('postgres', 'PUBLIC')
+                            AND table_schema = %(table_schema)s
+                            AND table_name = %(table_name)s
+                        ORDER BY
+                            grantee,
+                            privilege_type""",
+                       where_dict)
+
+        permissions = cursor.fetchall()
+
+        cursor.close()
+
+        self.extract_permission_definitions(permissions)
+
+        return permissions
+
+    def extract_permission_definitions(self, permissions: list) -> list:
+        users = dict()
+
+        for permission in permissions:
+            grantee = permission.get('grantee')
+
+            if not users[grantee]:
+                users[grantee] = list()
+
+            users[grantee].push(permission.get('privilege_type'))
+
+        for name, grants in users.items:
+            permission_definition = PermissionDefinition(
+                name,
+                grants
+            )
+            self.permission_definitions.push(permission_definition)
+
+        return self.permission_definitions
 
 
 class PrimaryKeyDefinition:
@@ -168,5 +251,12 @@ class IndexDefinition:
 
 
 class PermissionDefinition:
-    def __init__(self):
-        return
+    def __init__(self, name: str, grants: list):
+        self.name = name
+        self.grants = grants
+
+    def to_json(self):
+        json = dict()
+        json[self.name] = self.grants
+
+        return json

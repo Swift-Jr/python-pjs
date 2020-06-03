@@ -1,0 +1,10 @@
+name: pjs build action workflow
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Linting
+        run: docker-compose run lint
+      - name: test
+        run: docker-compose run tests

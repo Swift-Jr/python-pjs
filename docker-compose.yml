@@ -41,5 +41,4 @@ services:
     volumes:
       - ./:/repo
     depends_on:
-      - lint
       - postgres-pjs

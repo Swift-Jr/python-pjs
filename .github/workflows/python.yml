@@ -14,6 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Linting
-        run: docker-compose -f /docker-compose.yml run lint
+        run: docker-compose -f ./docker-compose.yml run lint
       - name: Tests
-        run: docker-compose -f /docker-compose.yml run tests
+        run: docker-compose -f ./docker-compose.yml run tests

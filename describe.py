@@ -107,6 +107,8 @@ class TableDefinition:
 
     def extract_column_definitions(self, columns: list) -> list:
         self.column_definitions = list()
+        self.primary_key_definition = PrimaryKeyDefinition()
+
         for column in columns:
             column_definition = ColumnDefinition(
                 name=column.get('column_name'),
@@ -158,19 +160,21 @@ class TableDefinition:
         return indexes
 
     def extract_index_definitions(self, indexes: list) -> list:
+        self.index_definitions = list()
+
         for index in indexes:
-            index_str = index.get('indexdef');
+            index_str = index.get('indexdef')
 
             index_definition = IndexDefinition(
-                index.get('indexname'),
-                'UNIQUE' in index_str
+                name=index.get('indexname'),
+                unique='UNIQUE' in index_str
             )
 
             if 'btree' in index_str:
-                index_definition.type = 'btree'
+                index_definition.set_type('btree')
 
             fields = re.findall(r'\((.*?)\)', index_str)
-            index_definition.fields = fields.split(', ')
+            index_definition.set_fields(fields[0].split(', '))
 
             self.index_definitions.append(index_definition)
 
@@ -283,17 +287,27 @@ class ColumnDefinition:
 
 
 class IndexDefinition:
+    @overload
     def __init__(self, name: str, unique: bool, type: str, fields: list):
-        self.name = name
-        self.unique = unique
+        ...
+
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name', None)
+        self.unique = kwargs.get('unique', False)
+        self.type = kwargs.get('type', None)
+        self.fields = kwargs.get('fields', list())
+
+    def set_type(self, type: str):
         self.type = type
+
+    def set_fields(self, fields: list):
         self.fields = fields
 
     def to_json(self):
         schema = dict()
         schema['type'] = self.type
-        schema['unique'] = self.nullable
-        schema['fields'] = ','.join(self.fields)
+        schema['unique'] = self.unique
+        schema['fields'] = self.fields
 
         json = dict()
         json[self.name] = schema

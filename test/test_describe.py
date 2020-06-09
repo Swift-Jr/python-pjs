@@ -1,9 +1,13 @@
+import json
 import os
 import psycopg2
 import pytest
 import sys
 
-from describe import TableDefinition, ColumnDefinition, PrimaryKeyDefinition
+from describe import (TableDefinition,
+                      ColumnDefinition,
+                      PrimaryKeyDefinition,
+                      IndexDefinition)
 
 
 @pytest.fixture(scope="module")
@@ -32,6 +36,10 @@ def setup_db(request):
         ts_tz_default_col timestamp with time zone default now(),
         CONSTRAINT sample_table_pkey PRIMARY KEY (id)
     );""")
+    # Create an index
+    cursor.execute("CREATE UNIQUE INDEX pjs_index_name "
+                   "ON pjs_pytest_testing.sample_table "
+                   "USING btree(int_nn_col,text_nn_col);")
     # Create a role to test permissions
     cursor.execute("CREATE ROLE pjs_pytest_role;")
     cursor.execute("""GRANT ALL
@@ -73,9 +81,69 @@ def test_describe_non_existing_table():
         TableDefinition('public', 'not_real', get_connection())
 
 
+def test_column_definition():
+    object = ColumnDefinition(
+        name='column_name',
+        type='column_type',
+        nullable=True,
+        max_length=128,
+        default_value="now()"
+    )
+
+    actual_json = object.to_json()
+    expected_json = dict(
+        column_name=dict(
+            type="column_type",
+            nullable=True,
+            max_length=128,
+            default_value="now()"
+        )
+    )
+
+    assert actual_json == expected_json,\
+        "The column definition should match the expected"
+
+
+def test_primary_key_definition():
+    object = PrimaryKeyDefinition('field')
+    object.add_field('second_field')
+    object.set_name('primary_key_name')
+
+    actual_json = object.to_json()
+
+    expected_json = dict(
+        fields=['field', 'second_field'],
+        constraint='primary_key_name'
+    )
+
+    assert actual_json == expected_json,\
+        "The primary key definition should match the expected"
+
+
+def test_index_definitions():
+    object = IndexDefinition(
+        name='index_name',
+        unique=True,
+        type='btree',
+        fields=['a', 'b', 'c']
+    )
+    actual_json = object.to_json()
+
+    expected_json = dict(
+        index_name=dict(
+            type='btree',
+            unique=True,
+            fields=['a', 'b', 'c']
+        )
+    )
+
+    assert actual_json == expected_json,\
+        "The index definition should match the expected"
+
+
 @pytest.mark.usefixtures("setup_db")
-class TestDefinition:
-    def test_describe_table_exists(self):
+class TestDescribe:
+    def test_table_exists(self):
         object = TableDefinition()
         object.name = 'not_real'
         object.namespace = 'not_real'
@@ -87,44 +155,7 @@ class TestDefinition:
         assert object.check_table_exists() is True,\
             "The table should exist"
 
-    def test_describe_column_definition(self):
-        object = ColumnDefinition(
-            name='column_name',
-            type='column_type',
-            nullable=True,
-            max_length=128,
-            default_value="now()"
-        )
-
-        actual_json = object.to_json()
-        expected_json = dict(
-            column_name=dict(
-                type="column_type",
-                nullable=True,
-                max_length=128,
-                default_value="now()"
-            )
-        )
-
-        assert actual_json == expected_json,\
-            "The column definition should match the expected"
-
-    def test_describe_primary_key_definition(self):
-        object = PrimaryKeyDefinition('field')
-        object.add_field('second_field')
-        object.set_name('primary_key_name')
-
-        actual_json = object.to_json()
-
-        expected_json = dict(
-            fields=['field', 'second_field'],
-            constraint='primary_key_name'
-        )
-
-        assert actual_json == expected_json,\
-            "The primary key definition should match the expected"
-
-    def test_describe_get_columns(self):
+    def test_get_columns(self):
         object = prepare_table_definiton()
         columns = object.get_column_definition()
 
@@ -146,7 +177,7 @@ class TestDefinition:
         assert columns[0] == id_column,\
             "The first column should be the id column"
 
-    def test_describe_extract_columns(self):
+    def test_extract_columns(self):
         object = prepare_table_definiton()
         columns = object.get_column_definition()
         column_defs = object.extract_column_definitions(columns)
@@ -168,7 +199,7 @@ class TestDefinition:
         assert column_defs[0].to_json() == id_column.to_json(),\
             "The first column definition should be the id column"
 
-    def test_describe_extract_primary_key(self):
+    def test_extract_primary_key(self):
         object = prepare_table_definiton()
         columns = object.get_column_definition()
         object.extract_column_definitions(columns)
@@ -176,25 +207,72 @@ class TestDefinition:
 
         assert isinstance(primary_key_def, PrimaryKeyDefinition)
 
-        primary_key_expected_def = PrimaryKeyDefinition('id')
-        primary_key_expected_def.set_name('sample_table_pkey')
+        primary_def_expected = PrimaryKeyDefinition('id')
+        primary_def_expected.set_name('sample_table_pkey')
 
-        assert primary_key_def.to_json() == primary_key_expected_def.to_json(),\
+        assert primary_key_def.to_json() == primary_def_expected.to_json(),\
             "The primary key should be the id column"
 
-# def test_describe_column_to_json():
-#
-# def test_describe_get_indexes():
-#
-# def test_describe_extract_indexes():
-#
-# def test_describe_index_to_json():
-#
+    def test_describe_get_indexes(self):
+        object = prepare_table_definiton()
+        index_list = object.get_index_definition()
+
+        assert isinstance(index_list, list)
+
+        assert len(index_list) == 2,\
+            "There should be two indexes"
+
+        index0 = dict(
+            indexname='sample_table_pkey',
+            indexdef="CREATE UNIQUE INDEX sample_table_pkey "
+                     "ON pjs_pytest_testing.sample_table USING btree (id)"
+        )
+
+        index1 = dict(
+            indexname='pjs_index_name',
+            indexdef="CREATE UNIQUE INDEX pjs_index_name "
+                     "ON pjs_pytest_testing.sample_table "
+                     "USING btree (int_nn_col, text_nn_col)"
+        )
+
+        assert index0 == index_list[0],\
+            "The primary key index should be created"
+
+        assert index1 == index_list[1],\
+            "The unique index should be created"
+
+    def test_describe_extract_indexes(self):
+        object = prepare_table_definiton()
+        index_list = object.get_index_definition()
+        index_def = object.extract_index_definitions(index_list)
+
+        assert isinstance(index_def, list)
+        assert isinstance(index_def[0], IndexDefinition)
+
+        assert len(index_def) == 2,\
+            "There should be two index definitions"
+
+        index0 = IndexDefinition(
+            name='sample_table_pkey',
+            unique=True,
+            type='btree',
+            fields=['id'])
+
+        index1 = IndexDefinition(
+            name='pjs_index_name',
+            unique=True,
+            type='btree',
+            fields=['int_nn_col', 'text_nn_col'])
+
+        assert index0.to_json() == index_def[0].to_json(),\
+            "The primary key unique index definition should match"
+
+        assert index1.to_json() == index_def[1].to_json(),\
+            "The custom index definition should match"
+
 # def test_describe_get_permissions():
 #
 # def test_describe_extract_permissions():
-#
-# def test_describe_permission_to_json():
 
 # def test_describe_table():
 #     definition = TableDefinition('pjs_pytest_testing', 'sample_table', get_connection())

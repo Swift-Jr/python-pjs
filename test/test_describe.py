@@ -169,7 +169,7 @@ class TestDescribe:
 
     def test_get_columns(self):
         object = prepare_table_definiton()
-        columns = object.get_column_definition()
+        columns = object.get_column_list()
 
         assert isinstance(columns, list)
 
@@ -191,7 +191,7 @@ class TestDescribe:
 
     def test_extract_columns(self):
         object = prepare_table_definiton()
-        columns = object.get_column_definition()
+        columns = object.get_column_list()
         column_defs = object.extract_column_definitions(columns)
 
         assert isinstance(column_defs, list)
@@ -213,7 +213,7 @@ class TestDescribe:
 
     def test_extract_primary_key(self):
         object = prepare_table_definiton()
-        columns = object.get_column_definition()
+        columns = object.get_column_list()
         object.extract_column_definitions(columns)
         primary_key_def = object.primary_key_definition
 
@@ -227,7 +227,7 @@ class TestDescribe:
 
     def test_describe_get_indexes(self):
         object = prepare_table_definiton()
-        index_list = object.get_index_definition()
+        index_list = object.get_index_list()
 
         assert isinstance(index_list, list)
 
@@ -255,7 +255,7 @@ class TestDescribe:
 
     def test_describe_extract_indexes(self):
         object = prepare_table_definiton()
-        index_list = object.get_index_definition()
+        index_list = object.get_index_list()
         index_def = object.extract_index_definitions(index_list)
 
         assert isinstance(index_def, list)
@@ -284,7 +284,7 @@ class TestDescribe:
 
     def test_describe_get_permissions(self):
         object = prepare_table_definiton()
-        permission_list = object.get_permission_definition()
+        permission_list = object.get_permission_list()
 
         assert isinstance(permission_list, list)
 
@@ -301,7 +301,7 @@ class TestDescribe:
 
     def test_describe_extract_permissions(self):
         object = prepare_table_definiton()
-        permission_list = object.get_permission_definition()
+        permission_list = object.get_permission_list()
         permission_def = object.extract_permission_definitions(permission_list)
 
         assert isinstance(permission_def, list)

@@ -34,9 +34,9 @@ class TableDefinition:
             raise NameError("The requested table does not exist: "
                             "{}.{}".format(self.namespace, self.name))
 
-        self.get_column_definition()
-        self.get_index_definition()
-        self.get_permission_definition()
+        self.get_column_list()
+        self.get_index_list()
+        self.get_permission_list()
 
     def check_table_exists(self) -> bool:
         where_dict = {"table_schema": self.namespace, "table_name": self.name}
@@ -58,7 +58,7 @@ class TableDefinition:
 
         return result
 
-    def get_column_definition(self) -> list:
+    def get_column_list(self) -> list:
         """
         Get a list of dictionaries for the specified
         schema.table in the database connected to.
@@ -132,7 +132,7 @@ class TableDefinition:
 
         return self.column_definitions
 
-    def get_index_definition(self) -> list:
+    def get_index_list(self) -> list:
         """
         Get a list of indexes for the specified
         schema.table in the database connected to.
@@ -181,7 +181,7 @@ class TableDefinition:
 
         return self.index_definitions
 
-    def get_permission_definition(self) -> None:
+    def get_permission_list(self) -> None:
         """
         Get a list of permissions for the specified
         schema.table in the database connected to.

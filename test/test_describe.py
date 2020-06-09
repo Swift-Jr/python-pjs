@@ -1,4 +1,3 @@
-import json
 import os
 import psycopg2
 import pytest
@@ -7,7 +6,8 @@ import sys
 from describe import (TableDefinition,
                       ColumnDefinition,
                       PrimaryKeyDefinition,
-                      IndexDefinition)
+                      IndexDefinition,
+                      PermissionDefinition)
 
 
 @pytest.fixture(scope="module")
@@ -71,12 +71,12 @@ def prepare_table_definiton() -> TableDefinition:
     return table_def
 
 
-def test_describe_missing_params_table():
+def test_initialise_missing_params_table():
     with pytest.raises(NameError):
         TableDefinition('missing_params')
 
 
-def test_describe_non_existing_table():
+def test_initialise_non_existing_table():
     with pytest.raises(NameError):
         TableDefinition('public', 'not_real', get_connection())
 
@@ -135,6 +135,18 @@ def test_index_definitions():
             unique=True,
             fields=['a', 'b', 'c']
         )
+    )
+
+    assert actual_json == expected_json,\
+        "The index definition should match the expected"
+
+
+def test_permission_definitions():
+    object = PermissionDefinition('userrole', ['DELETE', 'UPDATE'])
+    actual_json = object.to_json()
+
+    expected_json = dict(
+        userrole=['DELETE', 'UPDATE']
     )
 
     assert actual_json == expected_json,\
@@ -270,9 +282,46 @@ class TestDescribe:
         assert index1.to_json() == index_def[1].to_json(),\
             "The custom index definition should match"
 
-# def test_describe_get_permissions():
-#
-# def test_describe_extract_permissions():
+    def test_describe_get_permissions(self):
+        object = prepare_table_definiton()
+        permission_list = object.get_permission_definition()
 
-# def test_describe_table():
-#     definition = TableDefinition('pjs_pytest_testing', 'sample_table', get_connection())
+        assert isinstance(permission_list, list)
+
+        assert len(permission_list) == 7,\
+            "There should be 7 permission grants"
+
+        grant = dict(
+            grantee='pjs_pytest_role',
+            privilege_type="DELETE"
+        )
+
+        assert grant == permission_list[0],\
+            "The first grant should be delete"
+
+    def test_describe_extract_permissions(self):
+        object = prepare_table_definiton()
+        permission_list = object.get_permission_definition()
+        permission_def = object.extract_permission_definitions(permission_list)
+
+        assert isinstance(permission_def, list)
+        assert isinstance(permission_def[0], PermissionDefinition)
+
+        assert len(permission_def) == 1,\
+            "There should be 1 permission definition"
+
+        grant = PermissionDefinition(
+            'pjs_pytest_role',
+            [
+                "DELETE",
+                "INSERT",
+                "REFERENCES",
+                "SELECT",
+                "TRIGGER",
+                "TRUNCATE",
+                "UPDATE"
+            ]
+        )
+
+        assert grant.to_json() == permission_def[0].to_json(),\
+            "The user should be granted all permissions"

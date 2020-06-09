@@ -13,6 +13,7 @@ class TableDefinition:
         self.primary_key_definition = PrimaryKeyDefinition()
         self.column_definitions = list()
         self.index_definitions = list()
+        self.permission_definitions = list()
 
         self.name = name
         self.namespace = schema
@@ -213,17 +214,18 @@ class TableDefinition:
         return permissions
 
     def extract_permission_definitions(self, permissions: list) -> list:
+        self.permission_definitions = list()
         users = dict()
 
         for permission in permissions:
             grantee = permission.get('grantee')
 
-            if not users[grantee]:
+            if grantee not in users.keys():
                 users[grantee] = list()
 
             users[grantee].append(permission.get('privilege_type'))
 
-        for name, grants in users.items:
+        for name, grants in users.items():
             permission_definition = PermissionDefinition(
                 name,
                 grants
@@ -316,8 +318,8 @@ class IndexDefinition:
 
 
 class PermissionDefinition:
-    def __init__(self, name: str, grants: list):
-        self.name = name
+    def __init__(self, role_or_user: str, grants: list):
+        self.name = role_or_user
         self.grants = grants
 
     def to_json(self):

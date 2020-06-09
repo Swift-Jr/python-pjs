@@ -4,14 +4,23 @@ import re
 
 
 class TableDefinition:
-    def __init__(self, schema: str, name: str, connection: connection):
+    def __init__(self,
+                 schema: str = None,
+                 name: str = None,
+                 db_conn: connection = None):
+
         self.primary_key_definition = PrimaryKeyDefinition()
         self.column_definitions = list()
         self.index_definitions = list()
 
         self.name = name
         self.namespace = schema
-        self.connection = connection
+        self.connection = db_conn
+
+        if (self.name is None
+                and self.namespace is None
+                and self.connection is None):
+            return
 
         if (self.name is None
                 or self.namespace is None
@@ -32,20 +41,20 @@ class TableDefinition:
 
         cursor = self.connection.cursor()
         cursor.execute("""
-            SELECT
-                COUNT(*)
-            FROM
-                information_schema.tables
-            WHERE
-                table_schema = %(table_schema)s
-                AND table_name = %(table_name)s
-            """,
-            where_dict)
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            information_schema.tables
+                        WHERE
+                            table_schema = %(table_schema)s
+                            AND table_name = %(table_name)s
+                        """,
+                       where_dict)
 
         result = cursor.fetchone()[0] == 1
         cursor.close()
 
-        return cursor
+        return result
 
     def get_column_definition(self) -> list:
         """
@@ -58,16 +67,33 @@ class TableDefinition:
         cursor = self.connection.cursor(cursor_factory=RealDictCursor)
 
         cursor.execute("""SELECT
-                           column_name,
-                           is_nullable,
-                           data_type,
-                           character_maximum_length,
-                           is_identity
-                       FROM
-                            information_schema.columns
-                       WHERE
-                            table_schema = %(table_schema)s
-                            AND table_name = %(table_name)s""",
+                            col.column_name,
+                            col.is_nullable::TEXT = 'YES' AS is_nullable,
+                            col.data_type,
+                            col.character_maximum_length,
+                            col.is_identity::TEXT = 'YES' AS is_identity,
+                            col.column_default,
+                            keys.constraint_name,
+                            cons.constraint_type::TEXT = 'PRIMARY KEY'::TEXT
+                                AS is_primary_key
+                        FROM
+                            information_schema.columns col
+                        LEFT JOIN
+                            information_schema.key_column_usage keys
+                            ON
+                                col.column_name = keys.column_name
+                                AND col.table_name = keys.table_name
+                                AND col.table_schema  = keys.table_schema
+                        LEFT JOIN information_schema.table_constraints cons
+                            ON
+                                cons.constraint_name = keys.constraint_name
+                                AND cons.table_name  = col.table_name
+                                AND cons.table_schema = col.table_schema
+                        WHERE
+                            col.table_schema = %(table_schema)s
+                            AND col.table_name = %(table_name)s
+                        ORDER BY
+                            col.column_name""",
                        where_dict)
 
         columns = cursor.fetchall()
@@ -83,13 +109,14 @@ class TableDefinition:
             column_definition = ColumnDefinition(
                 column.get('column_name'),
                 column.get('data_type'),
-                column.get('is_nullable').upper() == 'YES',
-                column.get('character_maximum_length')
+                column.get('is_nullable'),
+                column.get('character_maximum_length'),
+                column.get('column_default')
             )
 
-            self.column_definitions.push(column_definition)
+            self.column_definitions.append(column_definition)
 
-            if column.get('is_identity').upper() == 'YES':
+            if column.get('is_primary_key'):
                 self.primary_key_definition.add_field(
                     column.get('column_name')
                 )
@@ -139,7 +166,7 @@ class TableDefinition:
             fields = re.findall(r'\((.*?)\)', index_str)
             index_definition.fields = fields.split(', ')
 
-            self.index_definitions.push(index_definition)
+            self.index_definitions.append(index_definition)
 
         return self.index_definitions
 
@@ -184,14 +211,14 @@ class TableDefinition:
             if not users[grantee]:
                 users[grantee] = list()
 
-            users[grantee].push(permission.get('privilege_type'))
+            users[grantee].append(permission.get('privilege_type'))
 
         for name, grants in users.items:
             permission_definition = PermissionDefinition(
                 name,
                 grants
             )
-            self.permission_definitions.push(permission_definition)
+            self.permission_definitions.append(permission_definition)
 
         return self.permission_definitions
 
@@ -199,11 +226,12 @@ class TableDefinition:
 class PrimaryKeyDefinition:
     fields = list()
 
-    def __init__(self, field):
-        self.add_field(field)
+    def __init__(self, field: str = None):
+        if field:
+            self.add_field(field)
 
-    def add_field(self, name):
-        self.fields.push(field)
+    def add_field(self, name: str):
+        self.fields.append(name)
 
     def to_json(self):
         json = dict()
@@ -213,17 +241,24 @@ class PrimaryKeyDefinition:
 
 
 class ColumnDefinition:
-    def __init__(self, name, type, nullable, max_length):
+    def __init__(self,
+                 name: str,
+                 type: str,
+                 nullable: bool,
+                 max_length: int,
+                 default_value=None):
         self.name = name
         self.type = type
         self.nullable = nullable
         self.max_length = max_length
+        self.default_value = default_value
 
     def to_json(self):
         schema = dict()
         schema['type'] = self.type
         schema['nullable'] = self.nullable
         schema['max_length'] = self.max_length
+        schema['default_value'] = self.default_value
 
         json = dict()
         json[self.name] = schema

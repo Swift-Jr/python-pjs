@@ -5,6 +5,39 @@ from typing import overload
 
 
 class TableDefinition:
+    """Generate definitions for a table
+
+    Usage
+    ---------
+    db_conn = psycopg2.connect()
+    definition = TableDefinition(schema, name, db_conn)
+
+    Parameters
+    ----------
+    schema : str
+        The DB schema the table lives in
+    name : str
+        The name of the table to describe
+    db_conn : connection
+        A psycopg2.connection object
+
+    Attributes
+    ----------
+    schema : str
+        The DB schema the table lives in
+    name : str
+        The name of the table to describe
+    primary_key_definition : PrimaryKeyDefinition
+        The tables primary key definition
+    column_definitions : list
+        A list of ColumnDefinition's for the table
+    index_definitions : list
+        A list of IndexDefinition's for the table
+    permission_definitions : list
+        A list of PermissionDefinition's for the table
+
+    """
+
     def __init__(self,
                  schema: str = None,
                  name: str = None,

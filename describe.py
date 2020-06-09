@@ -1,6 +1,7 @@
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 import re
+from typing import overload
 
 
 class TableDefinition:
@@ -105,13 +106,15 @@ class TableDefinition:
         return columns
 
     def extract_column_definitions(self, columns: list) -> list:
+        self.column_definitions = list()
         for column in columns:
             column_definition = ColumnDefinition(
-                column.get('column_name'),
-                column.get('data_type'),
-                column.get('is_nullable'),
-                column.get('character_maximum_length'),
-                column.get('column_default')
+                name=column.get('column_name'),
+                type=column.get('data_type'),
+                nullable=column.get('is_nullable'),
+                max_length=column.get('character_maximum_length'),
+                default_value=column.get('column_default'),
+                identity=column.get('is_identity')
             )
 
             self.column_definitions.append(column_definition)
@@ -120,8 +123,11 @@ class TableDefinition:
                 self.primary_key_definition.add_field(
                     column.get('column_name')
                 )
+                self.primary_key_definition.set_name(
+                    column.get('constraint_name')
+                )
 
-        return self.primary_key_definition
+        return self.column_definitions
 
     def get_index_definition(self) -> list:
         """
@@ -230,28 +236,38 @@ class PrimaryKeyDefinition:
         if field:
             self.add_field(field)
 
+    def set_name(self, name: str):
+        self.constraint_name = name
+
     def add_field(self, name: str):
         self.fields.append(name)
 
     def to_json(self):
         json = dict()
-        json['fields'] = ','.join(self.fields)
+        json['constraint'] = self.constraint_name
+        json['fields'] = self.fields
 
         return json
 
 
 class ColumnDefinition:
+    @overload
     def __init__(self,
                  name: str,
                  type: str,
                  nullable: bool,
                  max_length: int,
-                 default_value=None):
-        self.name = name
-        self.type = type
-        self.nullable = nullable
-        self.max_length = max_length
-        self.default_value = default_value
+                 default_value: str,
+                 identity: bool
+                 ):
+        ...
+
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name', None)
+        self.type = kwargs.get('type', None)
+        self.nullable = kwargs.get('nullable', False)
+        self.max_length = kwargs.get('max_length', None)
+        self.default_value = kwargs.get('default_value', None)
 
     def to_json(self):
         schema = dict()

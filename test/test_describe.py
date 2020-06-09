@@ -3,7 +3,7 @@ import psycopg2
 import pytest
 import sys
 
-from describe import TableDefinition, ColumnDefinition
+from describe import TableDefinition, ColumnDefinition, PrimaryKeyDefinition
 
 
 @pytest.fixture(scope="module")
@@ -88,7 +88,14 @@ class TestDefinition:
             "The table should exist"
 
     def test_describe_column_definition(self):
-        object = ColumnDefinition('column_name', 'column_type', True, 128, "now()")
+        object = ColumnDefinition(
+            name='column_name',
+            type='column_type',
+            nullable=True,
+            max_length=128,
+            default_value="now()"
+        )
+
         actual_json = object.to_json()
         expected_json = dict(
             column_name=dict(
@@ -102,9 +109,25 @@ class TestDefinition:
         assert actual_json == expected_json,\
             "The column definition should match the expected"
 
+    def test_describe_primary_key_definition(self):
+        object = PrimaryKeyDefinition('field')
+        object.add_field('second_field')
+        object.set_name('primary_key_name')
+
+        actual_json = object.to_json()
+
+        expected_json = dict(
+            fields=['field', 'second_field'],
+            constraint='primary_key_name'
+        )
+
+        assert actual_json == expected_json,\
+            "The primary key definition should match the expected"
+
     def test_describe_get_columns(self):
         object = prepare_table_definiton()
         columns = object.get_column_definition()
+
         assert isinstance(columns, list)
 
         assert len(columns) == 8,\
@@ -123,8 +146,42 @@ class TestDefinition:
         assert columns[0] == id_column,\
             "The first column should be the id column"
 
-# def test_describe_extract_columns():
-#
+    def test_describe_extract_columns(self):
+        object = prepare_table_definiton()
+        columns = object.get_column_definition()
+        column_defs = object.extract_column_definitions(columns)
+
+        assert isinstance(column_defs, list)
+        assert isinstance(column_defs[0], ColumnDefinition)
+
+        assert len(column_defs) == 8,\
+            "There should be 8 column definitions"
+
+        id_column = ColumnDefinition(
+            name='id',
+            type='bigint',
+            nullable=False,
+            max_length=None,
+            default_value=None,
+            identity=False
+        )
+        assert column_defs[0].to_json() == id_column.to_json(),\
+            "The first column definition should be the id column"
+
+    def test_describe_extract_primary_key(self):
+        object = prepare_table_definiton()
+        columns = object.get_column_definition()
+        object.extract_column_definitions(columns)
+        primary_key_def = object.primary_key_definition
+
+        assert isinstance(primary_key_def, PrimaryKeyDefinition)
+
+        primary_key_expected_def = PrimaryKeyDefinition('id')
+        primary_key_expected_def.set_name('sample_table_pkey')
+
+        assert primary_key_def.to_json() == primary_key_expected_def.to_json(),\
+            "The primary key should be the id column"
+
 # def test_describe_column_to_json():
 #
 # def test_describe_get_indexes():

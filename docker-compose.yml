@@ -4,7 +4,7 @@ services:
     image: postgres:10.5-alpine
     restart: always
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_PASSWORD: test
   lint:
@@ -36,7 +36,7 @@ services:
 
             python -m pip install -r requirements.dev.txt
             python -m pip install -r requirements.txt
-            python -m pytest -c test/pytest.ci.ini
+            python -m pytest -c test/pytest.ci.ini -v -vv
         "
     volumes:
       - ./:/repo

@@ -294,11 +294,10 @@ class ColumnDefinition:
     def __init__(self,
                  name: str,
                  type: str,
-                 nullable: bool,
-                 max_length: int,
-                 default_value: str,
-                 identity: bool
-                 ):
+                 identity: bool,
+                 nullable: bool = False,
+                 max_length: int = None,
+                 default_value: str = None):
         ...
 
     def __init__(self, **kwargs):

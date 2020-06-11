@@ -1,3 +1,5 @@
+[![forthebadge made-with-python](http://ForTheBadge.com/images/badges/made-with-python.svg)](https://www.python.org/) [![Generic badge](https://img.shields.io/badge/status-ALPHA-<COLOR>.svg)](https://shields.io/) [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Swift-Jr/python-pjs/blob/master/LICENSE)
+
 # python-pjs
 A Python library for managing pSQL database schema using JSON Schema, known as pj's __p__ython __j__son __s__chema.
 

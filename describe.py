@@ -108,12 +108,15 @@ class TableDefinition:
                                 WHEN col.domain_name is not null
                                     THEN domain_name
                                 WHEN col.data_type='character varying'
-                                    THEN 'varchar('||col.character_maximum_length||')'
+                                    THEN 'varchar('||
+                                        col.character_maximum_length||')'
                                 WHEN col.data_type='integer'
                                     THEN 'int'
                                 WHEN col.data_type='numeric'
-                                    THEN 'numeric('||col.numeric_precision||','||col.numeric_scale||')'
-                                WHEN col.data_type='timestamp without time zone'
+                                    THEN 'numeric('||col.numeric_precision||'
+                                                    ,'||col.numeric_scale||')'
+                                WHEN col.data_type='timestamp
+                                    without time zone'
                                     THEN 'timestamp'
                                 ELSE col.data_type
                             end as data_type,

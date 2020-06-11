@@ -1,0 +1,44 @@
+version: "2"
+services:
+  postgres-pjs:
+    image: postgres:10.5-alpine
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: test
+  lint:
+    image: python-psql:3.7
+    build:
+      context: ./
+      dockerfile: ./ci/Dockerfile
+    entrypoint: /bin/bash -c "/bin/bash -c \"$${@}\""
+    command: |
+        /bin/bash -c "
+            cd /repo
+            python -m pip install flake8
+            flake8 .
+        "
+    volumes:
+      - ./:/repo
+  tests:
+    image: python-psql:3.7
+    build:
+      context: ./
+      dockerfile: ./ci/Dockerfile
+    entrypoint: /bin/bash -c "/bin/bash -c \"$${@}\""
+    environment:
+      PGPASSWORD: test
+    command: |
+        /bin/bash -c "
+            cd /repo
+            ./ci/bootstrap_db.sh postgres-pjs postgres
+
+            python -m pip install -r requirements.dev.txt
+            python -m pip install -r requirements.txt
+            python -m pytest -c test/pytest.ci.ini -v -vv
+        "
+    volumes:
+      - ./:/repo
+    depends_on:
+      - postgres-pjs

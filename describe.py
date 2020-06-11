@@ -102,48 +102,47 @@ class TableDefinition:
         cursor = self.connection.cursor(cursor_factory=RealDictCursor)
 
         cursor.execute("""SELECT
-                            col.column_name,
-                            col.is_nullable::TEXT = 'YES' AS is_nullable,
+                            c.column_name,
+                            c.is_nullable::TEXT = 'YES' AS is_nullable,
                             CASE
-                                WHEN col.domain_name is not null
+                                WHEN c.domain_name is not null
                                     THEN domain_name
-                                WHEN col.data_type='character varying'
+                                WHEN c.data_type='character varying'
                                     THEN 'varchar('||
-                                        col.character_maximum_length||')'
-                                WHEN col.data_type='integer'
+                                        c.character_maximum_length||')'
+                                WHEN c.data_type='integer'
                                     THEN 'int'
-                                WHEN col.data_type='numeric'
-                                    THEN 'numeric('||col.numeric_precision||'
-                                                    ,'||col.numeric_scale||')'
-                                WHEN col.data_type='timestamp
-                                    without time zone'
+                                WHEN c.data_type='numeric'
+                                    THEN 'numeric('||c.numeric_precision||'
+                                                    ,'||c.numeric_scale||')'
+                                WHEN c.data_type='timestamp without time zone'
                                     THEN 'timestamp'
-                                ELSE col.data_type
+                                ELSE c.data_type
                             end as data_type,
-                            col.character_maximum_length,
-                            col.is_identity::TEXT = 'YES' AS is_identity,
-                            col.column_default,
+                            c.character_maximum_length,
+                            c.is_identity::TEXT = 'YES' AS is_identity,
+                            c.column_default,
                             keys.constraint_name,
                             cons.constraint_type::TEXT = 'PRIMARY KEY'::TEXT
                                 AS is_primary_key
                         FROM
-                            information_schema.columns col
+                            information_schema.columns c
                         LEFT JOIN
                             information_schema.key_column_usage keys
                             ON
-                                col.column_name = keys.column_name
-                                AND col.table_name = keys.table_name
-                                AND col.table_schema  = keys.table_schema
+                                c.column_name = keys.column_name
+                                AND c.table_name = keys.table_name
+                                AND c.table_schema  = keys.table_schema
                         LEFT JOIN information_schema.table_constraints cons
                             ON
                                 cons.constraint_name = keys.constraint_name
-                                AND cons.table_name  = col.table_name
-                                AND cons.table_schema = col.table_schema
+                                AND cons.table_name  = c.table_name
+                                AND cons.table_schema = c.table_schema
                         WHERE
-                            col.table_schema = %(table_schema)s
-                            AND col.table_name = %(table_name)s
+                            c.table_schema = %(table_schema)s
+                            AND c.table_name = %(table_name)s
                         ORDER BY
-                            col.column_name""",
+                            c.column_name""",
                        where_dict)
 
         columns = cursor.fetchall()

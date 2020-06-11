@@ -394,7 +394,6 @@ class IndexDefinition:
         self.unique = kwargs.get('unique', False)
         self.type = kwargs.get('type', None)
 
-
     def set_type(self, type: str):
         self.type = type
 

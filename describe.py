@@ -104,7 +104,19 @@ class TableDefinition:
         cursor.execute("""SELECT
                             col.column_name,
                             col.is_nullable::TEXT = 'YES' AS is_nullable,
-                            col.data_type,
+                            CASE
+                                WHEN col.domain_name is not null
+                                    THEN domain_name
+                                WHEN col.data_type='character varying'
+                                    THEN 'varchar('||col.character_maximum_length||')'
+                                WHEN col.data_type='integer'
+                                    THEN 'int'
+                                WHEN col.data_type='numeric'
+                                    THEN 'numeric('||col.numeric_precision||','||col.numeric_scale||')'
+                                WHEN col.data_type='timestamp without time zone'
+                                    THEN 'timestamp'
+                                ELSE col.data_type
+                            end as data_type,
                             col.character_maximum_length,
                             col.is_identity::TEXT = 'YES' AS is_identity,
                             col.column_default,
@@ -150,7 +162,8 @@ class TableDefinition:
                 nullable=column.get('is_nullable'),
                 max_length=column.get('character_maximum_length'),
                 default_value=column.get('column_default'),
-                identity=column.get('is_identity')
+                identity=column.get('is_identity'),
+                primary=column.get('is_primary_key')
             )
 
             self.column_definitions.append(column_definition)
@@ -267,11 +280,37 @@ class TableDefinition:
 
         return self.permission_definitions
 
+    def to_json(self, set_defaults: bool = False):
+        column_schema = dict()
+        for column in self.column_definitions:
+            for name, jdef in column.to_json(set_defaults).items():
+                column_schema[name] = jdef
+
+        index_schema = dict()
+        for index in self.index_definitions:
+            for name, jdef in index.to_json(set_defaults).items():
+                if name != self.primary_key_definition.constraint_name:
+                    index_schema[name] = jdef
+
+        permission_schema = dict()
+        for permission in self.permission_definitions:
+            for name, jdef in permission.to_json().items():
+                permission_schema[name] = jdef
+
+        json = dict()
+        json[self.name] = dict(
+            schema=column_schema,
+            primary_key=self.primary_key_definition.to_json(),
+            indexes=index_schema,
+            permissions=permission_schema
+        )
+
+        return json
+
 
 class PrimaryKeyDefinition:
-    fields = list()
-
     def __init__(self, field: str = None):
+        self.fields = list()
         if field:
             self.add_field(field)
 
@@ -294,25 +333,38 @@ class ColumnDefinition:
     def __init__(self,
                  name: str,
                  type: str,
-                 identity: bool,
+                 identity: bool = False,
                  nullable: bool = False,
                  max_length: int = None,
-                 default_value: str = None):
+                 default_value: str = None,
+                 primary: bool = False):
         ...
 
     def __init__(self, **kwargs):
-        self.name = kwargs.get('name', None)
-        self.type = kwargs.get('type', None)
+        self.name = kwargs.get('name')
+        self.type = kwargs.get('type')
+        if self.name is None or self.type is None:
+            raise NameError('Name and type are mandatory requirements for a '
+                            'ColumnDefinition')
+
+        self.identity = kwargs.get('nullable', False)
         self.nullable = kwargs.get('nullable', False)
         self.max_length = kwargs.get('max_length', None)
         self.default_value = kwargs.get('default_value', None)
+        self.primary = kwargs.get('primary', False)
 
-    def to_json(self):
+    def set_primary(self):
+        self.primary = True
+
+    def to_json(self, set_defaults: bool = False):
         schema = dict()
         schema['type'] = self.type
-        schema['nullable'] = self.nullable
-        schema['max_length'] = self.max_length
-        schema['default_value'] = self.default_value
+        if (not self.nullable and not self.primary) or set_defaults:
+            schema['nullable'] = self.nullable
+        if self.max_length or set_defaults:
+            schema['max_length'] = self.max_length
+        if self.default_value or set_defaults:
+            schema['default_value'] = self.default_value
 
         json = dict()
         json[self.name] = schema
@@ -322,14 +374,23 @@ class ColumnDefinition:
 
 class IndexDefinition:
     @overload
-    def __init__(self, name: str, unique: bool, type: str, fields: list):
+    def __init__(self,
+                 name: str,
+                 fields: list = list(),
+                 unique: bool = True,
+                 type: str = 'btree'):
         ...
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name', None)
+        if self.name is None:
+            raise NameError('Name is mandatory requirements for '
+                            'an IndexDefinition')
+
+        self.fields = kwargs.get('fields', list())
         self.unique = kwargs.get('unique', False)
         self.type = kwargs.get('type', None)
-        self.fields = kwargs.get('fields', list())
+
 
     def set_type(self, type: str):
         self.type = type
@@ -337,10 +398,15 @@ class IndexDefinition:
     def set_fields(self, fields: list):
         self.fields = fields
 
-    def to_json(self):
+    def to_json(self, set_defaults: bool = False):
         schema = dict()
-        schema['type'] = self.type
-        schema['unique'] = self.unique
+        if self.type or set_defaults:
+            if self.type:
+                schema['type'] = self.type
+            else:
+                schema['type'] = 'btree'
+        if self.unique or set_defaults:
+            schema['unique'] = self.unique
         schema['fields'] = self.fields
 
         json = dict()
@@ -356,6 +422,9 @@ class PermissionDefinition:
 
     def to_json(self):
         json = dict()
-        json[self.name] = self.grants
+        if len(self.grants) == 7:
+            json[self.name] = ['ALL']
+        else:
+            json[self.name] = self.grants
 
         return json

@@ -1,13 +1,21 @@
-import os
-import psycopg2
+# TODO: Add tests for set_defaults on ColumnDefinition and IndexDefinition
 import pytest
-import sys
 
 from describe import (TableDefinition,
                       ColumnDefinition,
                       PrimaryKeyDefinition,
                       IndexDefinition,
                       PermissionDefinition)
+
+from test.helpers import load_sample_json, get_connection
+
+ALL_PERMISSIONS = ["DELETE",
+                   "INSERT",
+                   "REFERENCES",
+                   "SELECT",
+                   "TRIGGER",
+                   "TRUNCATE",
+                   "UPDATE"]
 
 
 @pytest.fixture(scope="module")
@@ -50,18 +58,6 @@ def setup_db(request):
     request.addfinalizer(drop_db)
 
 
-def get_connection():
-    try:
-        connection = psycopg2.connect(user=os.environ["DB_USER"],
-                                      password=os.environ["DB_PASS"],
-                                      host=os.environ["DB_HOST"],
-                                      port=os.environ["DB_PORT"],
-                                      database=os.environ["DB_NAME"])
-        return connection
-    except Exception as e:
-        sys.exit(e)
-
-
 def prepare_table_definiton() -> TableDefinition:
     table_def = TableDefinition()
     table_def.name = 'sample_table'
@@ -85,7 +81,7 @@ def test_column_definition():
     object = ColumnDefinition(
         name='column_name',
         type='column_type',
-        nullable=True,
+        nullable=False,
         max_length=128,
         default_value="now()"
     )
@@ -94,7 +90,7 @@ def test_column_definition():
     expected_json = dict(
         column_name=dict(
             type="column_type",
-            nullable=True,
+            nullable=False,
             max_length=128,
             default_value="now()"
         )
@@ -102,6 +98,43 @@ def test_column_definition():
 
     assert actual_json == expected_json,\
         "The column definition should match the expected"
+
+
+def test_column_definition_primary():
+    object = ColumnDefinition(
+        name='primary_name',
+        type='column_type',
+        nullable=False,
+        primary=True
+    )
+
+    actual_json = object.to_json()
+    expected_json = dict(
+        primary_name=dict(
+            type="column_type"
+        )
+    )
+
+    assert actual_json == expected_json,\
+        "The primary column definition should match the expected"
+
+    object = ColumnDefinition(
+        name='primary_name',
+        type='column_type',
+        nullable=False
+    )
+
+    object.set_primary()
+
+    actual_json = object.to_json()
+    expected_json = dict(
+        primary_name=dict(
+            type="column_type"
+        )
+    )
+
+    assert actual_json == expected_json,\
+        "The post primary column definition should match the expected"
 
 
 def test_primary_key_definition():
@@ -151,6 +184,16 @@ def test_permission_definitions():
 
     assert actual_json == expected_json,\
         "The index definition should match the expected"
+
+    object = PermissionDefinition('userrole', ALL_PERMISSIONS)
+    actual_json = object.to_json()
+
+    expected_json = dict(
+        userrole=['ALL']
+    )
+
+    assert actual_json == expected_json,\
+        "The index definition should be ALL"
 
 
 @pytest.mark.usefixtures("setup_db")
@@ -203,10 +246,7 @@ class TestDescribe:
         id_column = ColumnDefinition(
             name='id',
             type='bigint',
-            nullable=False,
-            max_length=None,
-            default_value=None,
-            identity=False
+            primary=True
         )
         assert column_defs[0].to_json() == id_column.to_json(),\
             "The first column definition should be the id column"
@@ -312,16 +352,15 @@ class TestDescribe:
 
         grant = PermissionDefinition(
             'pjs_pytest_role',
-            [
-                "DELETE",
-                "INSERT",
-                "REFERENCES",
-                "SELECT",
-                "TRIGGER",
-                "TRUNCATE",
-                "UPDATE"
-            ]
+            ALL_PERMISSIONS
         )
 
         assert grant.to_json() == permission_def[0].to_json(),\
             "The user should be granted all permissions"
+
+    def test_describe_to_json(self):
+        expected = load_sample_json('pjs_pytest_test_sample_table.json')
+        definition = TableDefinition('pjs_pytest_testing',
+                                     'sample_table',
+                                     get_connection())
+        assert definition.to_json() == expected

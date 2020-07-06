@@ -124,7 +124,6 @@ try:
 except jsonschema.ValidationError:
     # Yikes, time to investigate
 
-
 # Or load and validate
 spec = JsonSpec(filepath="my_table.json")
 dumps(spec.TableDefinition.to_json())

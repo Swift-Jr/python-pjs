@@ -1,5 +1,5 @@
 {
-    "$schema": "https://github.com/Swift-Jr/python-pjs/blob/master/pjs.schema",
+    "$schema": "https://raw.githubusercontent.com/Swift-Jr/python-pjs/master/pjs.schema",
     "name": "sample_table",
     "schema": {
         "id": {

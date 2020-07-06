@@ -113,6 +113,23 @@ A structured component that describes a table column
 #### to_json(set_defaults=False) -> json
 Returns the json schema for the table. If __set_defaults = true__ then outputs default values for all valid attributes.
 
+## JsonSpec
+Used to validate and load pjs schema files. Once loaded you can unpack a TableDescribe definition.
+
+### Usage
+```python
+# Validate a schema
+try:
+    validate_schema({'your':'schema'})
+except jsonschema.ValidationError:
+    # Yikes, time to investigate
+
+
+# Or load and validate
+spec = JsonSpec(filepath="my_table.json")
+dumps(spec.TableDefinition.to_json())
+```
+
 ---
 # Developing for this project
 This project uses docker-compose to build and run linting and tests. After pulling the project, you can run the following commands:

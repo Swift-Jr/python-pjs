@@ -3,6 +3,8 @@ from psycopg2.extensions import connection
 import re
 from typing import overload
 
+DEFAULT_SCHEMA = 'https://github.com/Swift-Jr/python-pjs/blob/master/pjs.schema'  # noqa: E501
+
 
 class TableDefinition:
     """Generate definitions for a table
@@ -299,32 +301,56 @@ class TableDefinition:
             for name, jdef in permission.to_json().items():
                 permission_schema[name] = jdef
 
-        json = dict()
-        json[self.name] = dict(
+        json = dict(
+            name=self.name,
             schema=column_schema,
-            primary_key=self.primary_key_definition.to_json(),
+            primary_key=self.primary_key_definition.to_json(self),
             indexes=index_schema,
             permissions=permission_schema
         )
+
+        json['$schema'] = DEFAULT_SCHEMA
 
         return json
 
 
 class PrimaryKeyDefinition:
-    def __init__(self, field: str = None):
+    def __init__(self,
+                 field: str = None,
+                 constraint: str = None,
+                 table_definition: TableDefinition = None):
         self.fields = list()
+        self.constraint_name = None
+        self.table_definition = table_definition
+
         if field:
             self.add_field(field)
+        if constraint:
+            self.set_name(constraint)
+        elif table_definition:
+            self.set_name(table_definition.name + '_pkey')
 
     def set_name(self, name: str):
         self.constraint_name = name
 
     def add_field(self, name: str):
         self.fields.append(name)
+        return self
 
-    def to_json(self):
+    def to_json(self, table_definition: TableDefinition = None):
         json = dict()
+        if not self.constraint_name:
+            if table_definition is None:
+                table_definition = self.table_definition
+            if table_definition:
+                self.constraint_name = table_definition.name + '_pkey'
+            else:
+                raise NameError('Constraint name is required. Pass a '
+                                'TableDefinition or set manually.')
         json['constraint'] = self.constraint_name
+        if len(self.fields) == 0:
+            raise NameError('Fields are a mandatory requirement for '
+                            'an PrimaryKeyDefinition')
         json['fields'] = self.fields
 
         return json

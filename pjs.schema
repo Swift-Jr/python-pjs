@@ -1,0 +1,447 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://github.com/Swift-Jr/python-pjs/blob/master/pjs.schema",
+    "type": "object",
+    "title": "python-pjs schema",
+    "description": "JSON schema representation of pSQL database tables",
+    "default": {},
+    "examples": [
+        {
+            "source": "mysql.funding_searches",
+            "seed": "seed_data.json",
+            "query": "select_object_data.sql",
+            "name": "tablename",
+            "schema": {
+                "field_name": {
+                    "type": "int",
+                    "parse_with_function": "str",
+                    "nullable": true,
+                    "max_length": 128,
+                    "default_value": "NOW()",
+                    "is_identity": false
+                }
+            },
+            "primary_key": {
+                "fields": [
+                    "id"
+                ],
+                "name": "str"
+            },
+            "indexes": {
+                "index_name": {
+                    "type": "btree",
+                    "unique": true,
+                    "fields": [
+                        "id"
+                    ]
+                }
+            },
+            "permissions": {
+                "username": [
+                    "ALL"
+                ]
+            }
+        }
+    ],
+    "anyOf": [
+        {
+            "required": [
+                "source",
+                "schema"
+            ]
+        },
+        {
+            "required": [
+                "seed",
+                "schema"
+            ]
+        },
+        {
+            "required": [
+                "query",
+                "schema"
+            ]
+        },
+        {
+            "required": [
+                "schema"
+            ]
+        }
+    ],
+    "allOf": [
+        {
+            "not": {
+                "required": [
+                    "source",
+                    "seed"
+                ]
+            }
+        },
+        {
+            "not": {
+                "required": [
+                    "seed",
+                    "query"
+                ]
+            }
+        },
+        {
+            "not": {
+                "required": [
+                    "source",
+                    "query"
+                ]
+            }
+        },
+        {
+            "not": {
+                "required": [
+                    "source",
+                    "query",
+                    "seed"
+                ]
+            }
+        }
+    ],
+    "properties": {
+        "name": {
+            "$id": "#/properties/name",
+            "type": "string",
+            "title": "Table name",
+            "description": "Name of the table",
+            "examples": [
+                "sample_table"
+            ]
+        },
+        "source": {
+            "$id": "#/properties/source",
+            "type": "string",
+            "title": "Airflow connection and object name",
+            "description": "When integrating with Airflow, allows specification of a global connection object and table name to synchronise data from ",
+            "examples": [
+                "mysql.funding_searches"
+            ]
+        },
+        "seed": {
+            "$id": "#/properties/seed",
+            "type": "string",
+            "title": "Seed Data JSON file",
+            "description": "Specify a relative file path to allow newly created tables to be primed with data",
+            "examples": [
+                "seed_data.json"
+            ]
+        },
+        "query": {
+            "$id": "#/properties/query",
+            "type": "string",
+            "title": "Custom SQL source query",
+            "description": "For use with Airflow; Allows a pre-built SQL query to be used in place of a generated select statement.",
+            "examples": [
+                "select_object_data.sql"
+            ]
+        },
+        "schema": {
+            "$id": "#/properties/schema",
+            "type": "object",
+            "title": "The table schema.",
+            "description": "A list of fields within this table.",
+            "examples": [
+                {
+                    "field_name": {
+                        "type": "int",
+                        "parse_with_function": "str",
+                        "nullable": true,
+                        "max_length": 128,
+                        "default_value": "NOW()",
+                        "is_identity": false
+                    }
+                }
+            ],
+            "minProperties": 1,
+            "additionalProperties": false,
+            "patternProperties": {
+                ".*": {
+                    "$id": "#/properties/schema/properties/field",
+                    "type": "object",
+                    "title": "Schema of a field",
+                    "description": "Describe each field on the table.",
+                    "examples": [
+                        {
+                            "type": "int",
+                            "parse_with_function": "str",
+                            "nullable": true,
+                            "max_length": 128,
+                            "default_value": "NOW()",
+                            "is_identity": false
+                        }
+                    ],
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                        "type": {
+                            "$id": "#/properties/schema/properties/field_name/properties/type",
+                            "type": "string",
+                            "title": "Field type",
+                            "description": "A valid pSQL field type.",
+                            "examples": [
+                                "int"
+                            ]
+                        },
+                        "parse_with_function": {
+                            "$id": "#/properties/schema/properties/field_name/properties/parse_with_function",
+                            "type": "string",
+                            "title": "Parsing function",
+                            "description": "A function used to pre-process data into this field.",
+                            "default": null,
+                            "examples": [
+                                "str"
+                            ]
+                        },
+                        "nullable": {
+                            "$id": "#/properties/schema/properties/field_name/properties/nullable",
+                            "type": "boolean",
+                            "title": "Is field nullable",
+                            "description": "If the field value can be null.",
+                            "default": false,
+                            "examples": [
+                                true
+                            ]
+                        },
+                        "max_length": {
+                            "$id": "#/properties/schema/properties/field_name/properties/max_length",
+                            "type": "integer",
+                            "title": "Maximum field length",
+                            "description": "The maximum field length for text types.",
+                            "default": null,
+                            "examples": [
+                                128
+                            ]
+                        },
+                        "default_value": {
+                            "$id": "#/properties/schema/properties/field_name/properties/default_value",
+                            "type": "string",
+                            "title": "Fields default value",
+                            "description": "Set a default value for the field.",
+                            "default": null,
+                            "examples": [
+                                "NOW()"
+                            ]
+                        },
+                        "is_identity": {
+                            "$id": "#/properties/schema/properties/field_name/properties/is_identity",
+                            "type": "boolean",
+                            "title": "Field is identity",
+                            "description": "If the field is used as an identity (not related to primary keys).",
+                            "default": false,
+                            "examples": [
+                                false
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "primary_key": {
+            "$id": "#/properties/primary_key",
+            "type": "object",
+            "title": "Primary key definition",
+            "description": "Describes the tables primary key.",
+            "examples": [
+                {
+                    "fields": [
+                        "id"
+                    ],
+                    "constraint": "table_primary_key"
+                }
+            ],
+            "required": [
+                "fields"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "fields": {
+                    "$id": "#/properties/primary_key/properties/fields",
+                    "type": "array",
+                    "title": "Primary key fields",
+                    "description": "A list of fields for the primary key.",
+                    "examples": [
+                        [
+                            "id"
+                        ]
+                    ],
+                    "minItems": 1,
+                    "additionalItems": false,
+                    "items": {
+                        "anyOf": [
+                            {
+                                "$id": "#/properties/primary_key/properties/fields/items/anyOf/0",
+                                "type": "string",
+                                "title": "A field",
+                                "description": "A field included in the primary key.",
+                                "examples": [
+                                    "id"
+                                ]
+                            }
+                        ],
+                        "$id": "#/properties/primary_key/properties/fields/items"
+                    }
+                },
+                "constraint": {
+                    "$id": "#/properties/primary_key/properties/constraint",
+                    "type": "string",
+                    "title": "Constraint name",
+                    "description": "Name of the constraint",
+                    "default": "tablename_pkey",
+                    "examples": [
+                        "str"
+                    ]
+                }
+            }
+        },
+        "indexes": {
+            "$id": "#/properties/indexes",
+            "type": "object",
+            "title": "A list of indexes on the table",
+            "description": "An object of indexes with the their settings.",
+            "examples": [
+                {
+                    "index_name": {
+                        "type": "btree",
+                        "unique": true,
+                        "fields": [
+                            "id"
+                        ]
+                    }
+                }
+            ],
+            "additionalProperties": false,
+            "minProperties": 1,
+            "patternProperties": {
+                ".*": {
+                    "$id": "#/properties/indexes/properties/index",
+                    "type": "object",
+                    "title": "Index definition",
+                    "description": "Definition of a specific index.",
+                    "examples": [
+                        {
+                            "type": "btree",
+                            "unique": true,
+                            "fields": [
+                                "id"
+                            ]
+                        }
+                    ],
+                    "required": [
+                        "fields"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                        "type": {
+                            "$id": "#/properties/indexes/properties/index/properties/type",
+                            "type": "string",
+                            "title": "Index type",
+                            "description": "The type of index.",
+                            "default": "btree",
+                            "examples": [
+                                "btree"
+                            ],
+                            "enum": [
+                                "btree",
+                                "hash",
+                                "gist",
+                                "gin"
+                            ]
+                        },
+                        "unique": {
+                            "$id": "#/properties/indexes/properties/index/properties/unique",
+                            "type": "boolean",
+                            "title": "Unique index",
+                            "description": "If the index is a unique index.",
+                            "default": false,
+                            "examples": [
+                                true
+                            ]
+                        },
+                        "fields": {
+                            "$id": "#/properties/indexes/properties/index/properties/fields",
+                            "type": "array",
+                            "title": "Index fields",
+                            "description": "An array of fields used in this index.",
+                            "examples": [
+                                [
+                                    "id"
+                                ]
+                            ],
+                            "additionalItems": false,
+                            "minItems": 1,
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$id": "#/properties/indexes/properties/index/properties/fields/items/anyOf/0",
+                                        "type": "string",
+                                        "title": "Field",
+                                        "description": "Title of the field.",
+                                        "examples": [
+                                            "id"
+                                        ]
+                                    }
+                                ],
+                                "$id": "#/properties/indexes/properties/index/properties/fields/items"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "permissions": {
+            "$id": "#/properties/permissions",
+            "type": "object",
+            "title": "User permissions",
+            "description": "An object of usernames with their required permissions.",
+            "examples": [
+                {
+                    "username": [
+                        "ALL"
+                    ],
+                    "another_username": [
+                        "DELETE",
+                        "UPDATE"
+                    ]
+                }
+            ],
+            "additionalProperties": false,
+            "minProperties": 1,
+            "patternProperties": {
+                ".*": {
+                    "$id": "#/properties/permissions/user",
+                    "type": "array",
+                    "title": "Permission list",
+                    "description": "An array of required permissions. ALL is acceptable.",
+                    "examples": [
+                        [
+                            "ALL"
+                        ]
+                    ],
+                    "minItems": 1,
+                    "additionalItems": false,
+                    "items": {
+                        "$id": "#/properties/permissions/user/permission",
+                        "type": "string",
+                        "enum": [
+                            "ALL",
+                            "DELETE",
+                            "INSERT",
+                            "REFERENCES",
+                            "SELECT",
+                            "TRIGGER",
+                            "TRUNCATE",
+                            "UPDATE"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

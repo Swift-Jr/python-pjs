@@ -1,5 +1,2 @@
 psycopg2
-pytest
-pytest-env
-pytest-check
-pytest-xdist
+jsonschema

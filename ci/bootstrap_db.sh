@@ -8,4 +8,5 @@ while ! pg_isready -h $HOST -p 5432 -U $DB_USER; do
     echo 'Waiting for database..'
 done
 
+psql -h $HOST -U $DB_USER -c 'DROP DATABASE pjs;'
 psql -h $HOST -U $DB_USER -c 'CREATE DATABASE pjs;'

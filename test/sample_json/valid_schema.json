@@ -1,0 +1,48 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Swift-Jr/python-pjs/master/pjs.schema",
+    "source": "mysql.tablename",
+    "name": "table_name",
+    "schema": {
+        "minimum": {
+            "type": "string"
+        },
+        "full": {
+            "type": "numeric",
+            "parse_with_function": "function",
+            "nullable": true,
+            "max_length": 100,
+            "default_value": "NOW()",
+            "is_identity": true
+        }
+    },
+    "primary_key": {
+        "fields": [
+            "field1",
+            "field2"
+        ]
+    },
+    "indexes": {
+        "simple_index": {
+            "fields": [
+                "field"
+            ]
+        },
+        "complex_index": {
+            "fields": [
+                "field",
+                "field"
+            ],
+            "type": "hash",
+            "unique": false
+        }
+    },
+    "permissions": {
+        "role": [
+            "ALL"
+        ],
+        "another_role": [
+            "DELETE",
+            "UPDATE"
+        ]
+    }
+}

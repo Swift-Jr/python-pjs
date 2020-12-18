@@ -1,0 +1,54 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Swift-Jr/python-pjs/master/pjs.schema",
+    "name": "sample_table",
+    "schema": {
+        "id": {
+            "type": "bigint"
+        },
+        "int_col": {
+            "type": "int"
+        },
+        "int_nn_col": {
+            "type": "int",
+            "nullable": false
+        },
+        "text_col": {
+            "type": "text"
+        },
+        "text_nn_col": {
+            "type": "text",
+            "nullable": false
+        },
+        "ts_col": {
+            "type": "timestamp"
+        },
+        "ts_tz_col": {
+            "type": "timestamp with time zone"
+        },
+        "ts_tz_default_col": {
+            "type": "timestamp with time zone",
+            "default_value": "now()"
+        }
+    },
+    "primary_key": {
+        "fields": [
+            "id"
+        ],
+        "constraint": "sample_table_pkey"
+    },
+    "indexes": {
+        "pjs_index_name": {
+            "type": "btree",
+            "unique": true,
+            "fields": [
+                "int_nn_col",
+                "text_nn_col"
+            ]
+        }
+    },
+    "permissions": {
+        "pjs_pytest_role": [
+            "ALL"
+        ]
+    }
+}

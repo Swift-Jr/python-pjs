@@ -1,0 +1,31 @@
+{ 
+    sample_table: {
+        //Must have one of these
+        source: airflow_connection.object_name e.g. mysql.funding_searches
+        seed: filepath e.g seed_data.json
+        query: filepath e.g. select_object_data.sql
+
+        schema: {
+            id: {
+                type: bigint,
+                nullable: false
+            }
+        }
+
+        primary_key: {
+            fields: [field_name:str,...]
+        }
+
+        indexes: {
+            index_name:str {
+                type: str
+                unique: bool
+                fields: [field_name:str,...]
+            }
+        }
+
+        permissions: {
+            username:str [grants:str,...]
+        }
+    }
+}

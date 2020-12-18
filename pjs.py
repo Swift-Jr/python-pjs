@@ -2,8 +2,15 @@
 ---
 # https://github.com/CodeDrome/postgresql-python/blob/master/postgresqlschemareader.py
 # https://www.dataquest.io/blog/postgres-internals/
-# 
+#
 # DONE: use pg_catalog to generate a definition from the existing table
+
+# GIVEN we have a json definition in a file
+# AND we have a table in the database that matches the schema
+# WHEN we compare the json schema with the TableDefinition
+# THEN expect no changes to result
+
+
 # Generate a schema from the definition
 # compare 2 json schemas
 # loop through the fields, indexs of each
@@ -12,6 +19,11 @@
 # generate drops usinfg the old spec
 #
 # migrate by using the generate to create json schemas for each existing table
+
+# this is what we want to load/validate our JSON files in
+# tablespec = JsonSpecificafion(file.json)
+#
+# Consider SchemaDefinition - could contain default roles for all tables, etc
 class JsonSpecificafion:
     def validate_spec:
     def load_specification(table):

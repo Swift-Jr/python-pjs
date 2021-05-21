@@ -11,10 +11,10 @@
 # THEN expect no changes to result
 
 
-# Generate a schema from the definition
-# compare 2 json schemas
-# loop through the fields, indexs of each
-# when a difference occurs register a drop or alter
+# DONE: enerate a schema from the definition
+# DONE: compare 2 json schemas
+# DONE: loop through the fields, indexs of each
+# DONE: when a difference occurs register a drop or alter
 # generate an alter using the new spec
 # generate drops usinfg the old spec
 #
